@@ -102,6 +102,8 @@ function login() {
     var e = document.getElementById("email_field").value;
     var p = document.getElementById("password_field").value;
 
+    localStorage.setItem('email', e);
+
     $.ajax({
       type: 'POST',
       url: "/loginsignup",
@@ -109,13 +111,26 @@ function login() {
       dataType: "text",
       success: function(returnData){
         var res = jQuery.parseJSON(returnData);
-        if(res.status == "created"){
-            alert("created new user");
-            alert(res.response);
-        }
-        else if(res.status == "exists"){
-            alert("logging in existing user");
-            alert(res.response);
+
+        if(res.status == "exists" || res.status == "created"){
+            if(res.response == "Error logging in.")
+                alert("Error logging in. Try again.");
+            else{
+                localStorage.setItem('token', res.response);
+                $.ajax({
+                  url: "/mood",
+                  type: 'GET',
+                  data: {email: localStorage.getItem('email')},
+                  dataType: "text",
+                  headers: {"Authorization": localStorage.getItem('token')},
+                   success: function(returnData) {
+                        window.history.pushState("", "", '/mood');
+                        document.open();
+                        document.write(returnData);
+                        document.close();
+                   }
+                });
+            }
         }
         else{
             alert(res.response);
