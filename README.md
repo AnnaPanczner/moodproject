@@ -18,6 +18,9 @@ As for the tech I would use, I would need to deploy the final product to a produ
 With regard to scalability, the algorithm for checking what posts correspond to which users is quite slow when given a large dataset. Storing the entire root data pull from the DB and iterating over it as a JSON object (rather than calling a ref.get() to each child) would speed things up. Parallelizing this process would also help. With an upgrade to the Blaze plan in Firebase, I can add more databases for storing more mood pushes. Preferably, the users would be grouped alphabetically across multiple databases to make searching faster. The free Firebase plan also only allows 100 simulataneous users. Upgrading this plan would allow for more. Alternatively, we could use AWS for greater security and services just host our own SQL server.
 
 #Important Notes
+
+To run this app on localhost, all you need to do is run main.py. As long as the directory structure remains as it is on my GitHub, there should not be an issue. See the below note on the virtual environment. **You may have to change the address for localhost. It is hardcoded in a couple of locations as http://127.0.0.1:5000/**.
+
 - I modified \moodproject\venv\Lib\site-packages\firebase_admin\_http_client.py due to an issue with an outdated urllib3 package (see: https://stackoverflow.com/questions/56212844/how-to-fix-firebase-admin-error-typeerror-init-got-an-unexpected-keyword). Make sure that if you choose to ignore the venv, you replace this file.
 - For the /mood endpoint, streaks are output as a list of dictionaries. Each dict has a key, which is the date in YYYYMMDD format, and the streak number as the value.
 - You must navigate the frontend as follows: home page -> login/signup -> mood
