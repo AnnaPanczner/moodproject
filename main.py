@@ -6,7 +6,6 @@ from flask import Flask, render_template, request, jsonify
 import pyrebase
 import json
 import secrets
-from json import loads
 from datetime import date
 
 app = Flask(__name__, template_folder='./templates',static_folder='./static')
@@ -17,16 +16,15 @@ cred = fba.credentials.Certificate('firebaseadmin.json')
 firebase = fba.initialize_app(cred)
 pb = pyrebase.initialize_app(json.load(open('firebaseconfig.json')))
 
-def check_token(f):
+def authenticate(f):
     @wraps(f)
     def wrap(*args,**kwargs):
         if not request.headers.get('authorization'):
-            return {'message': 'No token provided'},400
+            return({'message': 'No token provided. Check request header.'},400)
         try:
-            user = auth.verify_id_token(request.headers['authorization'])
-            request.user = user
+            auth.verify_id_token(request.headers['authorization'])
         except:
-            return {'message':'Invalid token provided.'},400
+            return({'message':'Invalid token provided. Check login session.'},400)
         return f(*args, **kwargs)
     return wrap
 
@@ -64,7 +62,7 @@ def loginsignup():
         return jsonify(status="fail", response=str(e))
 
 @app.route('/mood', methods=['GET', 'POST'])
-@check_token
+@authenticate
 def mood():
     email = ""
     ref = db.reference(url="https://mood-c9d58-default-rtdb.firebaseio.com/")
@@ -78,18 +76,51 @@ def mood():
         ref.push().set({
             'email': email,
             'year': d.year,
-            'month': d.month,
-            'day': d.day,
+            'month': str('{:02d}'.format(d.month)),
+            'day': str('{:02d}'.format(d.day)),
             'rating': rating
         })
     elif request.method == 'GET':
         email = request.args.get('email')
 
     rawJSON = ref.get()
-    for entry in rawJSON:
-        rating = ref.child(str(entry)).get()
-        if(ref.child(str(entry)).child("email").get() == email):
-            returnHTML = returnHTML + str(rating) + "<br>"
+    days = []
+
+    if rawJSON != None:
+        for entry in rawJSON:
+            rating = ref.child(str(entry)).get()
+            if(ref.child(str(entry)).child("email").get() == email):
+                returnHTML = returnHTML + str(rating) + "<br>"
+
+                day = str(ref.child(str(entry)).child("day").get())
+                month = str(ref.child(str(entry)).child("month").get())
+                year = str(ref.child(str(entry)).child("year").get())
+
+                uniquedate = year+month+day
+                if uniquedate not in days:
+                    days.append(uniquedate)
+
+        print(sorted(days))
+        days = sorted(days)
+        previous = 0
+
+        streaks = []
+        streakcounter = 1
+        for d in days:
+            if(int(d)-previous == 1):
+                streakcounter = streakcounter + 1
+            else:
+                streakcounter = 1
+            streaks.append({d: streakcounter})
+            previous = int(d)
+
+        returnHTML = returnHTML + "<br>Here are the streaks in the format YYYYMMDD : streak count<br>"
+        returnHTML = returnHTML + str(streaks)
+
+    else:
+        returnHTML = returnHTML + "There is no data to display."
+
+    #add the html and javascript to support adding more mood ratings
     returnHTML = returnHTML + "</p>"
     returnHTML = returnHTML + "<input type = 'text' placeholder = 'Enter your mood rating' id = 'rating'>"
     returnHTML = returnHTML + "<input type='submit' onclick='rate()' value='Post Mood Rating'\>"
